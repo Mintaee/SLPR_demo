@@ -4,20 +4,26 @@ import gradio as gr
 
 start_time = None
 running = False
-live_timer_text = ""
+current_timer_value = ""
+timer_component = None
 
 def start_timer():
     global start_time, running
     start_time = time.time()
     running = True
-    return gr.update(value="⏳ 진행 중: 0.00초")
 
-def update_timer():
-    global start_time, running
-    while running:
-        elapsed = time.time() - start_time
-        time.sleep(0.1)
-        yield f"⏳ 진행 중: {elapsed:.2f}초"
+    # 타이머 쓰레드 시작
+    def update_loop():
+        global current_timer_value
+        while running:
+            elapsed = time.time() - start_time
+            current_timer_value = f"⏳ 진행 중: {elapsed:.2f}초"
+            if timer_component:
+                timer_component.update(value=current_timer_value)
+            time.sleep(0.1)
+
+    threading.Thread(target=update_loop, daemon=True).start()
+    return gr.update()
 
 def end_timer(text):
     global start_time, running
@@ -29,6 +35,8 @@ def end_timer(text):
     return "", f"**⏱ 소요 시간:** {elapsed:.2f}초", f"**📝 입력한 내용:** {text}"
 
 def build_interface():
+    global timer_component
+
     with gr.Blocks() as demo:
         gr.Markdown("### 🧪 SLPR Demo: 입력 시간 측정기")
 
@@ -41,16 +49,15 @@ def build_interface():
             )
             btn_submit = gr.Button("▶")
 
-        live_timer = gr.Markdown(value="")
+        timer_component = gr.Markdown(value="")
         output_time = gr.Markdown()
         output_text = gr.Markdown()
 
-        # 타이머 시작
-        txt_input.focus(start_timer, outputs=live_timer)
-        # 실시간 타이머 업데이트
-        txt_input.change(update_timer, outputs=live_timer)
-        # 입력 제출
-        txt_input.submit(end_timer, inputs=txt_input, outputs=[live_timer, output_time, output_text])
-        btn_submit.click(end_timer, inputs=txt_input, outputs=[live_timer, output_time, output_text])
+        # 입력창 클릭 시 타이머 시작
+        txt_input.focus(start_timer, outputs=timer_component)
+
+        # 입력 종료 시 결과 출력
+        txt_input.submit(end_timer, inputs=txt_input, outputs=[timer_component, output_time, output_text])
+        btn_submit.click(end_timer, inputs=txt_input, outputs=[timer_component, output_time, output_text])
 
     return demo
