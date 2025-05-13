@@ -1,6 +1,8 @@
 import time
 import threading
 import gradio as gr
+from tts.tts import tts
+from tts.tts import getQ
 
 start_time = None
 running = False
@@ -25,6 +27,12 @@ def end_timer(text, history):
     if start_time is None:
         return history, "", "⚠ 먼저 입력창을 클릭해 입력을 시작하세요.", gr.update(value="")
 
+    
+    #tts 변환
+    t = tts(text)
+    t.start()
+    t.join()#쓰레드가 끝날때 까지 기다리는 코드임
+
     elapsed = time.time() - start_time
     new_entry = f"**⏱ {elapsed:.2f}초** — {text}"
     history.append(new_entry)
@@ -34,7 +42,7 @@ def end_timer(text, history):
     start_time = time.time()
     running = True
 
-    return history, "⏳ 진행 중: 0.00초", combined_output, gr.update(value="")
+    return history, "⏳ 진행 중: 0.00초", combined_output, gr.update(value=""), getQ()
 
 def stop_timer():
     global running
@@ -68,16 +76,20 @@ def build_interface():
         # 포커스 해제 시 타이머 정지
         txt_input.blur(fn=stop_timer, outputs=live_timer)
 
+        #오디오 출력
+        output_audio = gr.Audio(label="음성 출력", type="filepath", autoplay=True)
+
         # 입력 제출: 결과 누적 + 타이머 리셋 + 입력창 초기화
         txt_input.submit(
             fn=end_timer,
             inputs=[txt_input, history_state],
-            outputs=[history_state, live_timer, output_log, txt_input]
+            outputs=[history_state, live_timer, output_log, txt_input,output_audio]
         )
+
         btn_submit.click(
             fn=end_timer,
             inputs=[txt_input, history_state],
-            outputs=[history_state, live_timer, output_log, txt_input]
+            outputs=[history_state, live_timer, output_log, txt_input,output_audio]
         )
 
     return demo
