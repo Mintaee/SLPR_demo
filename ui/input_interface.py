@@ -4,7 +4,6 @@ import gradio as gr
 
 start_time = None
 running = False
-live_timer_text = ""
 
 def start_timer():
     global start_time, running
@@ -19,18 +18,26 @@ def update_timer():
         time.sleep(0.1)
         yield f"⏳ 진행 중: {elapsed:.2f}초"
 
-def end_timer(text):
+def end_timer(text, history):
     global start_time, running
     running = False
+
     if start_time is None:
-        return "", "", "⚠ 먼저 입력창을 클릭해 입력을 시작하세요."
+        return history, "", "⚠ 먼저 입력창을 클릭해 입력을 시작하세요."
 
     elapsed = time.time() - start_time
-    return "", f"**⏱ 소요 시간:** {elapsed:.2f}초", f"**📝 입력한 내용:** {text}"
+    new_entry = f"**⏱ {elapsed:.2f}초** — {text}"
+    history.append(new_entry)
+    combined_output = "\n\n".join(history)
+
+    return history, "", combined_output  # (상태, 실시간 타이머 초기화, 전체 결과 출력)
 
 def build_interface():
     with gr.Blocks() as demo:
         gr.Markdown("### 🧪 SLPR Demo: 입력 시간 측정기")
+
+        # 상태: 누적 입력 기록 리스트
+        history_state = gr.State([])
 
         with gr.Row():
             txt_input = gr.Textbox(
@@ -41,16 +48,25 @@ def build_interface():
             )
             btn_submit = gr.Button("▶")
 
-        live_timer = gr.Markdown(value="")
-        output_time = gr.Markdown()
-        output_text = gr.Markdown()
+        live_timer = gr.Markdown(value="")     # 실시간 타이머 출력
+        output_log = gr.Markdown(value="")     # 누적 출력 결과
 
         # 타이머 시작
-        txt_input.focus(start_timer, outputs=live_timer)
+        txt_input.focus(fn=start_timer, outputs=live_timer)
+
         # 실시간 타이머 업데이트
-        txt_input.change(update_timer, outputs=live_timer)
-        # 입력 제출
-        txt_input.submit(end_timer, inputs=txt_input, outputs=[live_timer, output_time, output_text])
-        btn_submit.click(end_timer, inputs=txt_input, outputs=[live_timer, output_time, output_text])
+        txt_input.change(fn=update_timer, outputs=live_timer)
+
+        # 제출 시: 로그 누적 + 타이머 리셋 + 결과 출력
+        txt_input.submit(
+            fn=end_timer,
+            inputs=[txt_input, history_state],
+            outputs=[history_state, live_timer, output_log]
+        )
+        btn_submit.click(
+            fn=end_timer,
+            inputs=[txt_input, history_state],
+            outputs=[history_state, live_timer, output_log]
+        )
 
     return demo
