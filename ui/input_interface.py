@@ -36,6 +36,11 @@ def end_timer(text, history):
 
     return history, "⏳ 진행 중: 0.00초", combined_output, gr.update(value="")
 
+def stop_timer():
+    global running
+    running = False
+    return gr.update(value="⏹ 타이머 중단됨")
+
 def build_interface():
     with gr.Blocks() as demo:
         gr.Markdown("### 🧪 SLPR Demo: 입력 시간 측정기")
@@ -59,6 +64,9 @@ def build_interface():
 
         # 실시간 타이머 업데이트
         txt_input.change(fn=update_timer, outputs=live_timer)
+
+        # 포커스 해제 시 타이머 정지
+        txt_input.blur(fn=stop_timer, outputs=live_timer)
 
         # 입력 제출: 결과 누적 + 타이머 리셋 + 입력창 초기화
         txt_input.submit(
