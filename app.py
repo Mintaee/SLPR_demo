@@ -1,8 +1,7 @@
-from logic.input_timer import measure_input_duration
-import time
+# app.py
 
-start = time.time()
-input("타이핑 시작 → Enter 키로 제출: ")
-duration = measure_input_duration(start)
+from ui.input_interface import build_interface
 
-print(f"입력에 걸린 시간: {duration}초")
+if __name__ == "__main__":
+    demo = build_interface()
+    demo.launch()
