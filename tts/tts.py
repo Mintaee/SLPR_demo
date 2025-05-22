@@ -3,7 +3,12 @@ import queue
 
 q = queue.Queue()
 
-def getQ()-> queue:
+def getQ()-> str:
+    a = q.get()
+    if a == None:
+        print("[TTS] None")
+    else:
+        print(f"[TTS] {a} get")
     return q.get()
 
 
@@ -32,6 +37,7 @@ tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler-tts-mini-v1")
     
 def TTS(text): #실제 tts 코드 작성하면 됨
     wav = ""#wav의 파일의 이름을 적어줘야 해요!
+    print(f"[TTS] {text} writing")
     """<here>"""
     # 음성으로 생성하고자 하는 텍스트
     prompt = text
@@ -45,5 +51,5 @@ def TTS(text): #실제 tts 코드 작성하면 됨
     audio_arr = generation.cpu().numpy().squeeze()
     sf.write("parler_tts_out.wav", audio_arr, model.config.sampling_rate) # 생성된 음성을 .wav파일로 저장
     """</here>"""
-    print(f"[TTS] {text}")
+    print(f"[TTS] {text} done! :)")
     return "parler_tts_out.wav"
