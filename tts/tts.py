@@ -2,15 +2,10 @@ import threading #비동기 모듈
 import queue
 
 q = queue.Queue()
-textq = queue.Queue()
+qtext  = queue.Queue()
 
 def getQ()-> str:
     a = q.get()
-    b = textq.get()
-    #print(f"[TTS] what {b}")
-    while a != b:
-        q.put(a)
-        a = q.get()
     if a == None:
         print("[TTS] None")
     else:
@@ -24,9 +19,16 @@ class tts(threading.Thread):
         self.text = text.strip()
 
     def run(self):
-        textq.put(self.text)
-        q.put(TTS(self.text))
+        qtext.put(self.text)
       
+
+class run(threading.Thread):
+    def __init__(self, name=None):
+        super().__init__(name=name)
+
+    def run(self):
+        while True:
+            q.put((TTS(qtext.get())))
 
 #tts모델의 초기 세팅은 여기에 넣어야 함
 """<here>"""
