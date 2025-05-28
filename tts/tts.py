@@ -1,9 +1,10 @@
 import threading #비동기 모듈
 import queue
 
-q = queue.Queue()
-qtext  = queue.Queue()
+q = queue.Queue()#tts 결과물
+qtext  = queue.Queue()#tts에 넣을 text
 
+#tts가 만든 결과물을 가져오는 함수, queue형태로 가장 오래된 결과부터 가져옴
 def getQ()-> str:
     a = q.get()
     if a == None:
@@ -12,16 +13,16 @@ def getQ()-> str:
         print(f"[TTS] {a} get")
     return a
 
-
+#tts에 넣을 text를 받아오는 쓰레드
 class tts(threading.Thread):
     def __init__(self, text, name=None):
         super().__init__(name=name)
-        self.text = text.strip()
+        self.text = text.strip()#입력 들어올 text를 해당 쓰레드의 이름으로 명명한다.
 
     def run(self):
         qtext.put(self.text)
       
-
+#tts모델을 background에 항상 실행 시키고 있는 쓰레드
 class run(threading.Thread):
     def __init__(self, name=None):
         super().__init__(name=name)
@@ -30,7 +31,9 @@ class run(threading.Thread):
         while True:
             q.put((TTS(qtext.get())))
 
+
 #tts모델의 초기 세팅은 여기에 넣어야 함
+#"""<here>"""과 """</here>"""사이에 코드를 작성
 """<here>"""
 import torch
 from parler_tts import ParlerTTSForConditionalGeneration
@@ -46,8 +49,9 @@ tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler-tts-mini-v1")
 def TTS(text): #실제 tts 코드 작성하면 됨
     wav = text
     print(f"[TTS] {text} << writing")
-    """<here>"""
     try:
+        #"""<here>"""과 """</here>"""사이에 코드를 작성
+        """<here>"""
         # 음성으로 생성하고자 하는 텍스트
         prompt = text
         # 음성의 style을 지정하는 prompt
@@ -59,8 +63,9 @@ def TTS(text): #실제 tts 코드 작성하면 됨
         generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids) # 음성 생성
         audio_arr = generation.cpu().numpy().squeeze()
         sf.write(f"cache/{text}.wav", audio_arr, model.config.sampling_rate) # 생성된 음성을 .wav파일로 저장
+        """</here>"""
     except:
         print(f"[TTS] {text} >> errer! :(")
-    """</here>"""
+
     print(f"[TTS] {text} >> done! :)")
     return text
