@@ -64,8 +64,7 @@ def TTS(text): #실제 tts 코드 작성하면 됨
         audio_arr = generation.cpu().numpy().squeeze()
         sf.write(f"cache/{text}.wav", audio_arr, model.config.sampling_rate) # 생성된 음성을 .wav파일로 저장
         """</here>"""
+        print(f"[TTS] {text} >> done! :)")
     except:
         print(f"[TTS] {text} >> errer! :(")
-
-    print(f"[TTS] {text} >> done! :)")
     return text
