@@ -10,6 +10,8 @@ running = False #타이핑 하고 있는 중이면 running이 true가 된다.
 textArr = []#현제 입력하고 있는 text
 TTSTokkenI = 0#입력된 가장 끝의 토큰 수
 
+TTSTokkens = ["ahh"]
+
 def reset_inputs():
     return ""  # txt_input의 값을 빈 문자열로
 
@@ -34,6 +36,7 @@ def update_timer():
 
 #text를 입력을 받기전에 전역변수들을 초기화 시켜줌
 def set_text2TTS():
+    global TTSTokkens
     textArr = []
     TTSTokkenI = 0
 
@@ -55,11 +58,13 @@ def update_text2TTS(numText,text,history):#실시간으로 input을 할때에 �
         textArr = run_tts_tokkenize(text)
         if(TTSTokkenI == num):
             TTSTokkenI = 0
-            textToTTS = ""#tts에 넣을 토큰
+            print(TTSTokkens)
+            textToTTS = TTSTokkens[-1].split()[-1]#tts에 넣을 토큰
             for j in range(num):
                 #print(j-num, textArr)
                 textToTTS = textToTTS + " "+textArr[j-num] #tts에 넣을 num만큼의 토큰
-            threading.Thread(target=run_tts_background, args=(textToTTS,), daemon=True).start()
+            TTSTokkens.append(textToTTS)#추가
+            #threading.Thread(target=run_tts_background, args=(textToTTS,), daemon=True).start() # 임시
     except:
         textArr = []
         TTSTokkenI = 0
@@ -67,12 +72,21 @@ def update_text2TTS(numText,text,history):#실시간으로 input을 할때에 �
 #마지막에 enter를 누르고 난 후 num만큼의 토큰을 자르고 남은 토큰들을 모두 모아 tts 모델에 넣어줌
 def end_text2TTS(text):
     global textArr
+    global TTSTokkens
 
     AllTextArr = text.split(" ")
+    print(TTSTokkens)
     lastText = "" #마지막 토큰들
     for j in range(len(AllTextArr)-len(textArr)):
         lastText = AllTextArr[-j-1] + " " +lastText
-    run_tts_background(lastText)
+    lastText = TTSTokkens[-1].split()[-1] + lastText+ " ahh"
+    TTSTokkens.append(lastText)#추가
+    #run_tts_background(lastText)임시
+    for k in TTSTokkens:
+        run_tts_background(k)
+        import time
+        time.sleep(0.5)
+    TTSTokkens = ["ahh"]
 
 #text를 스페이스를 기준으로 토크나이즈 한 후, list로 변환 해줌
 def run_tts_tokkenize(text):
