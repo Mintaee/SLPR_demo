@@ -36,15 +36,58 @@ class run(threading.Thread):
 #tts모델의 초기 세팅은 여기에 넣어야 함
 #"""<here>"""과 """</here>"""사이에 코드를 작성
 """<here>"""
-import torch
-from parler_tts import ParlerTTSForConditionalGeneration
-from transformers import AutoTokenizer
+import numpy as np
 import soundfile as sf
+from pydub import AudioSegment
+from pydub.silence import detect_nonsilent
 
-# ParlerTTS 모델 선언
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-model = ParlerTTSForConditionalGeneration.from_pretrained("parler-tts/parler-tts-mini-v1").to(device)
-tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler-tts-mini-v1")
+
+from pydub import AudioSegment
+import numpy as np
+
+def trim_silence_from_audio(audio, sr, silence_thresh=-40, min_silence_len=200, padding_ms=50):
+    # float32 → int16 변환
+    if audio.dtype != np.int16:
+        audio_int16 = (audio * 32767).astype(np.int16)
+    else:
+        audio_int16 = audio
+
+    # AudioSegment 변환
+    if audio_int16.ndim == 1:
+        audio_segment = AudioSegment(
+            audio_int16.tobytes(),
+            frame_rate=sr,
+            sample_width=2,
+            channels=1
+        )
+    else:
+        audio_segment = AudioSegment(
+            audio_int16.tobytes(),
+            frame_rate=sr,
+            sample_width=2,
+            channels=audio_int16.shape[1]
+        )
+
+    nonsilence_ranges = detect_nonsilent(
+        audio_segment,
+        min_silence_len=min_silence_len,
+        silence_thresh=silence_thresh
+    )
+    if len(nonsilence_ranges) == 0:
+        return audio
+    start_trim = max(0, nonsilence_ranges[0][0] - padding_ms)
+    end_trim = min(len(audio_segment), nonsilence_ranges[-1][1] + padding_ms)
+    trimmed = audio_segment[start_trim:end_trim]
+    y = np.array(trimmed.get_array_of_samples())
+    if trimmed.channels == 2:
+        y = y.reshape((-1, 2))
+    y = y.astype(np.float32) / 32767
+    return y
+
+from kokoro import KPipeline
+import soundfile as sf
+import torch
+pipeline = KPipeline(lang_code='a')
 """</here>"""
     
 def TTS(text): #실제 tts 코드 작성하면 됨
@@ -53,17 +96,17 @@ def TTS(text): #실제 tts 코드 작성하면 됨
     try:
         #"""<here>"""과 """</here>"""사이에 코드를 작성
         """<here>"""
-        # 음성으로 생성하고자 하는 텍스트
-        prompt = text
-        # 음성의 style을 지정하는 prompt
-        description = "A female speaker delivers a slightly expressive and animated speech with a moderate speed and pitch The recording is of very high quality, with the speaker's voice sounding clear and very close up."
-
-        input_ids = tokenizer(description, return_tensors="pt").input_ids.to(device)
-        prompt_input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
-
-        generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids) # 음성 생성
-        audio_arr = generation.cpu().numpy().squeeze()
-        sf.write(f"cache/{text}.wav", audio_arr, model.config.sampling_rate) # 생성된 음성을 .wav파일로 저장
+        text = text
+        generator = pipeline(text, voice='af_heart')
+        for i, (gs, ps, audio) in enumerate(generator):
+            #print(i, gs, ps)
+            #display(Audio(data=audio, rate=24000, autoplay=i==0)) 
+            if hasattr(audio, "numpy"):
+                audio = audio.numpy()
+            else:
+                audio = np.array(audio)
+            audio = trim_silence_from_audio(audio, 24000)
+            sf.write(f'cache/{text}.wav', audio, 24000)
         """</here>"""
         print(f"[TTS] {text} >> done! :)")
     except:
