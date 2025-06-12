@@ -28,6 +28,7 @@ class run(threading.Thread):
         super().__init__(name=name)
 
     def run(self):
+        TTS("null")
         while True:
             q.put((TTS(qtext.get())))
 
